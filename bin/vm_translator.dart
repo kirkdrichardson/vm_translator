@@ -25,6 +25,7 @@ void main(List<String> arguments) async {
   while (parser.hasMoreLines) {
     final commandType = parser.commandType();
     print('command type is $commandType');
+
     switch (commandType) {
       case CommandType.cPush:
       case CommandType.cPop:

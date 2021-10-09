@@ -22,7 +22,9 @@ class Parser {
     try {
       await for (final line in _stream) {
         final trimmed = line.trim();
-        if (trimmed.isEmpty || trimmed.startsWith('#')) {
+        if (trimmed.isEmpty ||
+            trimmed.startsWith('#') ||
+            trimmed.startsWith('//')) {
           continue;
         }
 
