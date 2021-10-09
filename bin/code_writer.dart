@@ -10,17 +10,13 @@ class CodeWriter {
 
   /// Write to the output file the assembly code that implements the given cArithmetic-logical command.
   void writecArithmetic(String command) {
-    // todo
+    final translatedCode = stringBufferWithComment(command);
 
     switch (command) {
       case 'add':
-        sink.writeStringSync('''
-${_pop()}
-D=M
-${_pop()}
-D=D+M
-${_push()}
-          ''');
+        translatedCode
+          ..writeln()
+          ..write([_pop(), 'D=M', _pop(), 'D=D+M', _push()].join('\n'));
         break;
       // case 'sub':
       // case 'neg':
@@ -33,55 +29,53 @@ ${_push()}
       default:
         throw UnimplementedError('Unknown cArithmetic command: $command');
     }
+
+    writeBufferContentsToOutput(translatedCode);
   }
 
   /// Write to the output file the assembly code that implements the given push/pop command
   void writePushPop(CommandType command, String segment, int index) {
-    final assemblySnippet = StringBuffer();
-    // Add comment of the original vm command
-    assemblySnippet.write('# ${command.toBaseCommand()} $segment $index');
+    final originalCommand = '${command.toBaseCommand()} $segment $index';
+    final translatedCode = stringBufferWithComment(originalCommand);
 
     switch (command) {
       // todo support segments other than "constant"
       case CommandType.cPush:
-        assemblySnippet.write('\n@$index\nD=A\n${_push()}');
+        translatedCode.write('\n@$index\nD=A\n${_push()}');
         break;
       case CommandType.cPop:
-        sink.writeStringSync('''
-@SP
-M=M-1
-A=M
-D=M''');
+        translatedCode.write('\n@SP\nM=M-1\nA=M');
         break;
       default:
-        throw UnimplementedError('');
+        throw UnimplementedError(
+            'CommandType of $command not recognized. Could not translate "$originalCommand"');
     }
 
-    assemblySnippet.writeln();
-    sink.writeStringSync(assemblySnippet.toString());
+    writeBufferContentsToOutput(translatedCode);
   }
 
-  String _push() {
-    return '''
-@SP
-A=M
-M=D
-@SP
-M=M+1'''
-        .trim();
+  // Pushes the value in D to the stack. Equivalent to "push D"
+  static String _push() => ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1'].join('\n');
+
+  // Pops the value from the top of the stack and puts it in D. Equivalent to "pop D"
+  static String _pop() => ['@SP', 'M=M-1', 'A=M'].join('\n');
+
+  // Returns a StringBuffer with the passed comment.
+  static StringBuffer stringBufferWithComment(String comment) {
+    final assemblySnippet = StringBuffer();
+    assemblySnippet.write('// $comment');
+    return assemblySnippet;
   }
 
-  String _pop() {
-    return '''
-@SP
-M=M-1
-A=M
-D=M'''
-        .trim();
+  void writeBufferContentsToOutput(StringBuffer buffer) {
+    buffer.writeln();
+    sink.writeStringSync(buffer.toString());
   }
 
-  /// Close the output file/stream
+  /// Finish the program with and infinite loopo and close the output file/stream
   void close() {
+    sink.writeStringSync('\n(INFINITE)\n@INFINITE\n0;JMP');
+
     sink.closeSync();
   }
 }
