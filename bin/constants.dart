@@ -15,6 +15,13 @@ extension CommandTypeStringUtil on CommandType {
       toString().replaceFirst('CommandType.c', '').toLowerCase();
 }
 
+// For each VM logic command, define the corresponding jump operation in the Hack language.
+const comparisonCommandToOperation = {
+  'eq': 'JEQ',
+  'gt': 'JGT',
+  'lt': 'JLT',
+};
+
 // enum Segment {
 //   LCL,
 //   ARG,

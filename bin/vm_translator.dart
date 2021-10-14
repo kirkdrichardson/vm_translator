@@ -32,7 +32,7 @@ void main(List<String> arguments) async {
         codeWriter.writePushPop(commandType, parser.arg1(), parser.arg2());
         break;
       case CommandType.cArithmetic:
-        codeWriter.writecArithmetic(parser.arg1());
+        codeWriter.writeArithmetic(parser.arg1());
         break;
       default:
         throw UnimplementedError('Unrecognized command type of $commandType');
