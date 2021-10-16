@@ -63,30 +63,12 @@ class CodeWriter {
             _push(),
           ].join('\n'));
           break;
-        case 'local':
+        case 'local': // Intentional fall-through
         case 'argument': // Intentional fall-through
         case 'this': // Intentional fall-through
         case 'that': // Intentional fall-through
-          translatedCode.write([
-            '@${vmSegmentToHackLabel[segment]}',
-            'D=M',
-            '@$index',
-            'A=D+A',
-            'D=M',
-            _push(),
-          ].join('\n'));
-          break;
         case 'temp':
-          // Since TEMP is a fixed, non-virtual register, we want to add 5 + index
-          // rather than access a pointer to a virtual segment.
-          translatedCode.write([
-            '@5',
-            'D=A',
-            '@$index',
-            'A=D+A',
-            'D=M', // D = RAM[5 + index]
-            _push(),
-          ].join('\n'));
+          translatedCode.write(_generateSegmentPush(segment, index));
           break;
 
         default:
@@ -98,41 +80,12 @@ class CodeWriter {
         case 'constant':
           translatedCode.write(_pop());
           break;
-        case 'local':
+        case 'local': // Intentional fall-through
         case 'argument': // Intentional fall-through
         case 'this': // Intentional fall-through
         case 'that': // Intentional fall-through
-
-          translatedCode.write([
-            // RAM[R13] = RAM[LCL] + index
-            '@${vmSegmentToHackLabel[segment]}',
-            'D=M',
-            '@$index',
-            'D=D+A',
-            '@R13',
-            'M=D',
-            // D = RAM[--SP]
-            _popD(),
-            // RAM[R13] = D
-            '@R13',
-            'A=M',
-            'M=D',
-          ].join('\n'));
-          break;
-
         case 'temp': // Intentional fall-through
-          translatedCode.write([
-            '@5',
-            'D=A',
-            '@$index',
-            'D=D+A',
-            '@R13',
-            'M=D', // RAM[R13] = 5 + index
-            _popD(), // D = RAM[--SP]
-            '@R13',
-            'A=M',
-            'M=D', // RAM[R13] = D
-          ].join('\n'));
+          translatedCode.write(_generateSegmentPop(segment, index));
           break;
 
         default:
@@ -187,6 +140,41 @@ class CodeWriter {
         "D=${{'and': 'D&M', 'or': 'D|M'}[command]}",
         _push(),
       ].join('\n');
+
+  static _generateSegmentPushPopHeader(String segment, int index) {
+    final isVirtual = segment != 'temp';
+
+    return [
+      '@${isVirtual ? vmSegmentToHackLabel[segment] : 5}',
+      // If virtual, we want to value pointed to, otherwise we want the static address value
+      isVirtual ? 'D=M' : 'D=A',
+    ].join(('\n'));
+  }
+
+  // Handles pushing a value from a virtual or fixed memory segment to the stack
+  static String _generateSegmentPush(String segment, int index) {
+    return [
+      _generateSegmentPushPopHeader(segment, index),
+      '@$index',
+      'A=D+A',
+      'D=M',
+      _push(),
+    ].join('\n');
+  }
+
+  static String _generateSegmentPop(String segment, int index) {
+    return [
+      _generateSegmentPushPopHeader(segment, index),
+      '@$index',
+      'D=D+A',
+      '@R13',
+      'M=D', // D = RAM[--SP]
+      _popD(),
+      '@R13',
+      'A=M',
+      'M=D', // RAM[R13] = D
+    ].join('\n');
+  }
 
   // Returns a StringBuffer with the passed comment.
   static StringBuffer _stringBufferWithComment(String comment) {
