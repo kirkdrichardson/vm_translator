@@ -16,10 +16,20 @@ extension CommandTypeStringUtil on CommandType {
 }
 
 // For each VM logic command, define the corresponding jump operation in the Hack language.
-const comparisonCommandToOperation = {
+const vmComparisonCommandToJumpOperation = {
   'eq': 'JEQ',
   'gt': 'JGT',
   'lt': 'JLT',
+};
+
+// For each memory segment name in the VM language, map the corresponding Hack label.
+const vmSegmentToHackLabel = {
+  'local': 'LCL',
+  'argument': 'ARG',
+  'this': 'THIS',
+  'that': 'THAT',
+  // TEMP is fixed and mapped directly on RAM locations 5-12
+  'temp': '5',
 };
 
 // enum Segment {

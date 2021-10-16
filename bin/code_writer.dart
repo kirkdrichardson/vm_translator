@@ -51,18 +51,96 @@ class CodeWriter {
   void writePushPop(CommandType command, String segment, int index) {
     final originalCommand = '${command.toBaseCommand()} $segment $index';
     final translatedCode = _stringBufferWithComment(originalCommand);
+    translatedCode.writeln();
 
-    switch (command) {
-      // todo support segments other than "constant"
-      case CommandType.cPush:
-        translatedCode.write('\n@$index\nD=A\n${_push()}');
-        break;
-      case CommandType.cPop:
-        translatedCode.write('\n@SP\nM=M-1\nA=M');
-        break;
-      default:
-        throw UnimplementedError(
-            'CommandType of $command not recognized. Could not translate "$originalCommand"');
+    if (CommandType.cPush == command) {
+      switch (segment) {
+        case 'constant':
+          // set D=index
+          translatedCode.write([
+            '@$index',
+            'D=A',
+            _push(),
+          ].join('\n'));
+          break;
+        case 'local':
+        case 'argument': // Intentional fall-through
+        case 'this': // Intentional fall-through
+        case 'that': // Intentional fall-through
+          translatedCode.write([
+            '@${vmSegmentToHackLabel[segment]}',
+            'D=M',
+            '@$index',
+            'A=D+A',
+            'D=M',
+            _push(),
+          ].join('\n'));
+          break;
+        case 'temp':
+          // Since TEMP is a fixed, non-virtual register, we want to add 5 + index
+          // rather than access a pointer to a virtual segment.
+          translatedCode.write([
+            '@5',
+            'D=A',
+            '@$index',
+            'A=D+A',
+            'D=M', // D = RAM[5 + index]
+            _push(),
+          ].join('\n'));
+          break;
+
+        default:
+          throw UnsupportedError(
+              'Segment "$segment" unsupported for CommandType of $command');
+      }
+    } else if (CommandType.cPop == command) {
+      switch (segment) {
+        case 'constant':
+          translatedCode.write(_pop());
+          break;
+        case 'local':
+        case 'argument': // Intentional fall-through
+        case 'this': // Intentional fall-through
+        case 'that': // Intentional fall-through
+
+          translatedCode.write([
+            // RAM[R13] = RAM[LCL] + index
+            '@${vmSegmentToHackLabel[segment]}',
+            'D=M',
+            '@$index',
+            'D=D+A',
+            '@R13',
+            'M=D',
+            // D = RAM[--SP]
+            _popD(),
+            // RAM[R13] = D
+            '@R13',
+            'A=M',
+            'M=D',
+          ].join('\n'));
+          break;
+
+        case 'temp': // Intentional fall-through
+          translatedCode.write([
+            '@5',
+            'D=A',
+            '@$index',
+            'D=D+A',
+            '@R13',
+            'M=D', // RAM[R13] = 5 + index
+            _popD(), // D = RAM[--SP]
+            '@R13',
+            'A=M',
+            'M=D', // RAM[R13] = D
+          ].join('\n'));
+          break;
+
+        default:
+          throw UnsupportedError(
+              'Segment "$segment" unsupported for CommandType of $command');
+      }
+    } else {
+      throw UnsupportedError('CommandType $command not supported');
     }
 
     _writeBufferContentsToOutput(translatedCode);
@@ -86,11 +164,12 @@ class CodeWriter {
     final int trueLabelId = getNextRandom();
     final setDLabelId = getNextRandom();
 
+    // todo - optimize to avoid using labels here
     return [
       _sub(), // Compute difference of top two items on stack
       _popD(), // Get the result in the D value
       '@TRUE_$trueLabelId',
-      'D;${comparisonCommandToOperation[command]}', // e.g. for 'eq' -> 'JEQ', for 'gt' -> 'JGT'
+      'D;${vmComparisonCommandToJumpOperation[command]}', // e.g. for 'eq' -> 'JEQ', for 'gt' -> 'JGT'
       'D=0 // D=FALSE', // If not equal, set D to "false"
       '@SET_D_$setDLabelId',
       '0;JMP', // If not equal jump right to pushing D value
