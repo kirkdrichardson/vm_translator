@@ -22,14 +22,12 @@ const vmComparisonCommandToJumpOperation = {
   'lt': 'JLT',
 };
 
-// For each memory segment name in the VM language, map the corresponding Hack label.
+// For each virtual memory segment name in the VM language, map the corresponding Hack label.
 const vmSegmentToHackLabel = {
   'local': 'LCL',
   'argument': 'ARG',
   'this': 'THIS',
   'that': 'THAT',
-  // TEMP is fixed and mapped directly on RAM locations 5-12
-  'temp': '5',
 };
 
 // enum Segment {

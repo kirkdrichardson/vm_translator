@@ -49,6 +49,8 @@ class CodeWriter {
 
   /// Write to the output file the assembly code that implements the given push/pop command
   void writePushPop(CommandType command, String segment, int index) {
+    _validateCommand(command, segment, index);
+
     final originalCommand = '${command.toBaseCommand()} $segment $index';
     final translatedCode = _stringBufferWithComment(originalCommand);
     translatedCode.writeln();
@@ -70,6 +72,13 @@ class CodeWriter {
         case 'temp':
           translatedCode.write(_generateSegmentPush(segment, index));
           break;
+        case 'pointer':
+          translatedCode.write([
+            '@${index == 0 ? 'THIS' : 'THAT'}',
+            'D=M',
+            _push(),
+          ].join('\n'));
+          break;
 
         default:
           throw UnsupportedError(
@@ -86,6 +95,13 @@ class CodeWriter {
         case 'that': // Intentional fall-through
         case 'temp': // Intentional fall-through
           translatedCode.write(_generateSegmentPop(segment, index));
+          break;
+        case 'pointer':
+          translatedCode.write([
+            _popD(),
+            '@${index == 0 ? 'THIS' : 'THAT'}',
+            'M=D',
+          ].join('\n'));
           break;
 
         default:
@@ -174,6 +190,15 @@ class CodeWriter {
       'A=M',
       'M=D', // RAM[R13] = D
     ].join('\n');
+  }
+
+  void _validateCommand(CommandType command, String segment, int index) {
+    // todo - add error handling for common errors
+    // e.g.
+    if (segment == 'pointer' && (index < 0 || index > 1)) {
+      throw RangeError(
+          'Index of $index is invalid for "pointer" segment. Expected 0 or 1.');
+    }
   }
 
   // Returns a StringBuffer with the passed comment.
