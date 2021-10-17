@@ -4,12 +4,14 @@ import 'dart:math';
 import 'constants.dart';
 
 class CodeWriter {
-  File file;
-  RandomAccessFile sink;
+  final File _file;
+  final RandomAccessFile _sink;
+  final String _filename;
   final Random _random;
 
-  CodeWriter(this.file)
-      : sink = file.openSync(mode: FileMode.write),
+  CodeWriter(this._file)
+      : _sink = _file.openSync(mode: FileMode.write),
+        _filename = _file.path.split('/').last.split('.').first,
         _random = Random();
 
   int getNextRandom() => _random.nextInt(1000000);
@@ -79,6 +81,13 @@ class CodeWriter {
             _push(),
           ].join('\n'));
           break;
+        case 'static':
+          translatedCode.write([
+            '@$_filename.$index',
+            'D=M',
+            _push(),
+          ].join('\n'));
+          break;
 
         default:
           throw UnsupportedError(
@@ -100,6 +109,13 @@ class CodeWriter {
           translatedCode.write([
             _popD(),
             '@${index == 0 ? 'THIS' : 'THAT'}',
+            'M=D',
+          ].join('\n'));
+          break;
+        case 'static':
+          translatedCode.write([
+            _popD(),
+            '@$_filename.$index',
             'M=D',
           ].join('\n'));
           break;
@@ -211,14 +227,14 @@ class CodeWriter {
 
   void _writeBufferContentsToOutput(StringBuffer buffer) {
     buffer.writeln();
-    sink.writeStringSync(buffer.toString());
+    _sink.writeStringSync(buffer.toString());
   }
 
   /// Finish the program with and infinite loopo and close the output file/stream
   void close() {
-    sink.writeStringSync('\n(INFINITE)\n@INFINITE\n0;JMP\n');
+    _sink.writeStringSync('\n(INFINITE)\n@INFINITE\n0;JMP\n');
 
-    sink.closeSync();
+    _sink.closeSync();
   }
 
   // void _format() async {
