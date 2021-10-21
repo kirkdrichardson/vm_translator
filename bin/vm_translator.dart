@@ -17,12 +17,7 @@ void main(List<String> arguments) async {
   final parser = Parser(File(filepath));
   final codeWriter = CodeWriter(File(outputPath));
 
-  // todo - rewrite to avoid having to do an init here.
-  // File(filepath).readAsLinesSync().iterator.
-  await parser.init();
-
-  print('parser inited');
-  while (parser.hasMoreLines) {
+  while (parser.hasMoreCommands) {
     final commandType = parser.commandType();
     print('command type is $commandType');
 
