@@ -3,20 +3,50 @@ import 'dart:math';
 
 import 'constants.dart';
 
-class CodeWriter {
-  final File _file;
+abstract class ICodeWriter {
+  void setFilename(String filename);
+
+  /// Write to the output file the assembly code that implements the given cArithmetic-logical command.
+  void writeArithmetic(String command);
+
+  /// Write to the output file the assembly code that implements the given push/pop command.
+  void writePushPop(CommandType command, String segment, int index);
+
+  /// Writes assembly code that effects the label command.
+  void writeLabel(String label);
+
+  /// Writes assembly code thate effects the goto command.
+  void writeGoto(String label);
+
+  /// Writes assembly code that effects the if-goto command.
+  void writeIf(String label);
+
+  /// Writes assembly code that effects the function command.
+  void writeFunction(String functionName, int nArgs);
+
+  /// Writes assembly code that effects the call command.
+  void writeCall(String functionName, int nArgs);
+
+  /// Writes assembly code that effects the function command.
+  void writeReturn();
+
+  /// Closes the output file/stream.
+  void close();
+}
+
+class CodeWriter implements ICodeWriter {
   final RandomAccessFile _sink;
   final String _filename;
   final Random _random;
 
-  CodeWriter(this._file)
-      : _sink = _file.openSync(mode: FileMode.write),
-        _filename = _file.path.split('/').last.split('.').first,
+  CodeWriter(file)
+      : _sink = file.openSync(mode: FileMode.write),
+        _filename = file.path.split('/').last.split('.').first,
         _random = Random();
 
   int getNextRandom() => _random.nextInt(1000000);
 
-  /// Write to the output file the assembly code that implements the given cArithmetic-logical command.
+  @override
   void writeArithmetic(String command) {
     final translatedCode = _stringBufferWithComment(command)..writeln();
 
@@ -49,7 +79,7 @@ class CodeWriter {
     _writeBufferContentsToOutput(translatedCode);
   }
 
-  /// Write to the output file the assembly code that implements the given push/pop command
+  @override
   void writePushPop(CommandType command, String segment, int index) {
     _validateCommand(command, segment, index);
 
@@ -130,6 +160,53 @@ class CodeWriter {
 
     _writeBufferContentsToOutput(translatedCode);
   }
+
+  @override
+  void setFilename(String filename) {
+    // TODO: implement setFilename
+  }
+
+  @override
+  void writeCall(String functionName, int nArgs) {
+    // TODO: implement writeCall
+  }
+
+  @override
+  void writeFunction(String functionName, int nArgs) {
+    // TODO: implement writeFunction
+  }
+
+  @override
+  void writeGoto(String label) {
+    // TODO: implement writeGoto
+  }
+
+  @override
+  void writeIf(String label) {
+    // TODO: implement writeIf
+  }
+
+  @override
+  void writeLabel(String label) {
+    // TODO: implement writeLabel
+  }
+
+  @override
+  void writeReturn() {
+    // TODO: implement writeReturn
+  }
+
+  /// Finish the program with an infinite loopo and close the output file/stream
+  @override
+  void close() {
+    _sink.writeStringSync('\n(INFINITE)\n@INFINITE\n0;JMP\n');
+
+    _sink.closeSync();
+  }
+
+//////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// PRIVATE UTILITIES ////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 
   // Pushes the value in D to the stack. Equivalent to "push D"
   static String _push() =>
@@ -229,15 +306,4 @@ class CodeWriter {
     buffer.writeln();
     _sink.writeStringSync(buffer.toString());
   }
-
-  /// Finish the program with and infinite loopo and close the output file/stream
-  void close() {
-    _sink.writeStringSync('\n(INFINITE)\n@INFINITE\n0;JMP\n');
-
-    _sink.closeSync();
-  }
-
-  // void _format() async {
-  //   // todo - implement opt-in format method to indent non-label lines
-  // }
 }
