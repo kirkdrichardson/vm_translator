@@ -15,7 +15,7 @@ void main(List<String> arguments) async {
 
   void _invalidPath(String path) {
     exitCode = 2;
-    print('❌ Invalid file or directory path: "$path"');
+    print('💩 Invalid file or directory path: "$path"');
   }
 
   // If initiated without arguments, operate on the current directory.
@@ -68,7 +68,7 @@ void main(List<String> arguments) async {
 
   // Final check to ensure we gathered files.
   if (_filesToTranslate.isEmpty) {
-    print('❌ No *.vm files found to translate.');
+    print('💩 No *.vm files found to translate.');
     exitCode = 2;
     return;
   }
