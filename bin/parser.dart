@@ -1,15 +1,25 @@
+import 'dart:io';
+
 import 'constants.dart';
 
 class Parser {
   final List<String> _commands;
   int _currentCommandIndex = 0;
 
-  Parser(_file)
-      : _commands = _file.readAsLinesSync()..retainWhere(_lineIsNotComment);
+  Parser(File _file)
+      : _commands = (_file.readAsLinesSync()
+              ..retainWhere(_lineIsNotBlankOrComment))
+            .map((line) {
+          return line.replaceAll(RegExp(r'\/\/.*'), '').trim();
+        }).toList(); // Replace in-line comments
 
-  static bool _lineIsNotComment(String line) {
-    var trimmedLine = line.trim();
-    return !(trimmedLine.isNotEmpty && trimmedLine.startsWith('//'));
+  static bool _lineIsNotBlankOrComment(String line) {
+    final trimmedLine = line.trim();
+    if (line.isEmpty) {
+      return false;
+    }
+
+    return !trimmedLine.startsWith('//');
   }
 
   /// Are there more commands in the input file?
@@ -38,15 +48,21 @@ class Parser {
       case 'pop':
         return CommandType.cPop;
       case 'add':
-      case 'sub':
-      case 'neg':
-      case 'eq':
-      case 'gt':
-      case 'lt':
-      case 'and':
-      case 'or':
-      case 'not':
+      case 'sub': // Intentional fall-through
+      case 'neg': // Intentional fall-through
+      case 'eq': // Intentional fall-through
+      case 'gt': // Intentional fall-through
+      case 'lt': // Intentional fall-through
+      case 'and': // Intentional fall-through
+      case 'or': // Intentional fall-through
+      case 'not': // Intentional fall-through
         return CommandType.cArithmetic;
+      case 'label':
+        return CommandType.cLabel;
+      case 'if-goto':
+        return CommandType.cIf;
+      case 'goto':
+        return CommandType.cGoto;
       default:
         throw UnimplementedError('Received unrecognized command "$command"');
     }
@@ -56,13 +72,13 @@ class Parser {
   /// In the case of cArithmetic, the command itself (add, sub, etc.) is returned.
   /// Should not be called if the current command is C_RETURN
   String arg1() {
-    final segments = currentCommand.split(' ');
+    final segments = currentCommand.trim().split(' ');
     return segments.length == 1 ? segments[0] : segments[1];
   }
 
   /// Return the second argument of the current command.
   /// Should  be called only if the current command is push, pop, C_FUNCTION, or C_CALL.
-  int arg2() => int.parse(currentCommand.split(' ').last);
+  int arg2() => int.parse(currentCommand.trim().split(' ').last);
 
   // Future<void> _handleError(String path) async {
   //   if (await FileSystemEntity.isDirectory(path)) {
