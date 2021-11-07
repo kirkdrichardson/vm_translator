@@ -36,12 +36,14 @@ abstract class ICodeWriter {
 
 class CodeWriter implements ICodeWriter {
   final RandomAccessFile _sink;
-  final String _filename;
+  // The VM file currently being translated. Caller must set.
+  String _filename = 'Default';
+  // The function currently being translated.
+  String _function = 'Main';
   final Random _random;
 
   CodeWriter(file)
       : _sink = file.openSync(mode: FileMode.write),
-        _filename = file.path.split('/').last.split('.').first,
         _random = Random();
 
   int getNextRandom() => _random.nextInt(1000000);
@@ -84,8 +86,7 @@ class CodeWriter implements ICodeWriter {
     _validateCommand(command, segment, index);
 
     final originalCommand = '${command.toBaseCommand()} $segment $index';
-    final translatedCode = _stringBufferWithComment(originalCommand);
-    translatedCode.writeln();
+    final translatedCode = _stringBufferWithComment(originalCommand)..writeln();
 
     if (CommandType.cPush == command) {
       switch (segment) {
@@ -163,7 +164,7 @@ class CodeWriter implements ICodeWriter {
 
   @override
   void setFilename(String filename) {
-    // TODO: implement setFilename
+    _filename = filename;
   }
 
   @override
@@ -178,17 +179,29 @@ class CodeWriter implements ICodeWriter {
 
   @override
   void writeGoto(String label) {
-    // TODO: implement writeGoto
+    _writeBufferContentsToOutput(
+      _stringBufferWithComment('// goto $label\n')
+        ..writeln('@${_genLabel(label)}')
+        ..writeln('0;JMP\n'),
+    );
   }
 
   @override
   void writeIf(String label) {
-    // TODO: implement writeIf
+    _writeBufferContentsToOutput(
+      _stringBufferWithComment('// if-goto $label\n')
+        ..writeln(_pop())
+        ..writeln('@${_genLabel(label)}')
+        ..writeln('D;JNE'),
+    );
   }
 
   @override
   void writeLabel(String label) {
-    // TODO: implement writeLabel
+    _writeBufferContentsToOutput(
+      _stringBufferWithComment('// label $label\n')
+        ..writeln('(${_genLabel(label)})\n'),
+    );
   }
 
   @override
@@ -301,6 +314,8 @@ class CodeWriter implements ICodeWriter {
       ..write('// $comment');
     return assemblySnippet;
   }
+
+  String _genLabel(String label) => '$_filename.$_function.$label';
 
   void _writeBufferContentsToOutput(StringBuffer buffer) {
     buffer.writeln();

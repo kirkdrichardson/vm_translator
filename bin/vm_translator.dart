@@ -46,7 +46,7 @@ void main(List<String> arguments) async {
     }
   }
 
-  // Collect files is operating on directory.
+  // Collect files if operating on directory.
   if (_directory != null) {
     // Ensure directory is valid
     if (!(await _directory.exists())) {
@@ -79,6 +79,8 @@ void main(List<String> arguments) async {
 
   for (final file in _filesToTranslate) {
     print('Translating ${file.path}');
+    final filename = file.path.split('/').last.replaceAll('.vm', '');
+    codeWriter.setFilename(filename);
     final parser = Parser(file);
 
     while (parser.hasMoreCommands) {
@@ -92,6 +94,15 @@ void main(List<String> arguments) async {
           break;
         case CommandType.cArithmetic:
           codeWriter.writeArithmetic(parser.arg1());
+          break;
+        case CommandType.cLabel:
+          codeWriter.writeLabel(parser.arg1());
+          break;
+        case CommandType.cGoto:
+          codeWriter.writeGoto(parser.arg1());
+          break;
+        case CommandType.cIf:
+          codeWriter.writeIf(parser.arg1());
           break;
         default:
           throw UnimplementedError('Unrecognized command type of $commandType');
