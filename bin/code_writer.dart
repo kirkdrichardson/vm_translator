@@ -50,35 +50,35 @@ class CodeWriter implements ICodeWriter {
 
   @override
   void writeArithmetic(String command) {
-    final translatedCode = _stringBufferWithComment(command)..writeln();
+    final asmOut = _stringBufferWithComment(command)..writeln();
 
     switch (command) {
       case 'add':
-        translatedCode.write([_popD(), _pop(), 'D=D+M', _push()].join('\n'));
+        asmOut.write([_popD(), _pop(), 'D=D+M', _push()].join('\n'));
         break;
       case 'sub':
-        translatedCode.write(_sub());
+        asmOut.write(_sub());
         break;
       case 'neg':
-        translatedCode.write([_pop(), 'D=-D', _push()].join('\n'));
+        asmOut.write([_pop(), 'D=-D', _push()].join('\n'));
         break;
       case 'eq':
       case 'gt': // Intentional fall-through
       case 'lt': // Intentional fall-through
-        translatedCode.write(_generateComparisonOperation(command));
+        asmOut.write(_generateComparisonOperation(command));
         break;
       case 'and': // Intentional fall-through
       case 'or':
-        translatedCode.write(_generateLogicalOperation(command));
+        asmOut.write(_generateLogicalOperation(command));
         break;
       case 'not':
-        translatedCode.write([_popD(), 'D=!D', _push()].join('\n'));
+        asmOut.write([_popD(), 'D=!D', _push()].join('\n'));
         break;
       default:
         throw UnimplementedError('Unknown cArithmetic command: $command');
     }
 
-    _writeBufferContentsToOutput(translatedCode);
+    _writeBufferContentsToOutput(asmOut);
   }
 
   @override
@@ -86,13 +86,13 @@ class CodeWriter implements ICodeWriter {
     _validateCommand(command, segment, index);
 
     final originalCommand = '${command.toBaseCommand()} $segment $index';
-    final translatedCode = _stringBufferWithComment(originalCommand)..writeln();
+    final asmOut = _stringBufferWithComment(originalCommand)..writeln();
 
     if (CommandType.cPush == command) {
       switch (segment) {
         case 'constant':
           // set D=index
-          translatedCode.write([
+          asmOut.write([
             '@$index',
             'D=A',
             _push(),
@@ -103,17 +103,17 @@ class CodeWriter implements ICodeWriter {
         case 'this': // Intentional fall-through
         case 'that': // Intentional fall-through
         case 'temp':
-          translatedCode.write(_generateSegmentPush(segment, index));
+          asmOut.write(_generateSegmentPush(segment, index));
           break;
         case 'pointer':
-          translatedCode.write([
+          asmOut.write([
             '@${index == 0 ? 'THIS' : 'THAT'}',
             'D=M',
             _push(),
           ].join('\n'));
           break;
         case 'static':
-          translatedCode.write([
+          asmOut.write([
             '@$_filename.$index',
             'D=M',
             _push(),
@@ -127,24 +127,24 @@ class CodeWriter implements ICodeWriter {
     } else if (CommandType.cPop == command) {
       switch (segment) {
         case 'constant':
-          translatedCode.write(_pop());
+          asmOut.write(_pop());
           break;
         case 'local': // Intentional fall-through
         case 'argument': // Intentional fall-through
         case 'this': // Intentional fall-through
         case 'that': // Intentional fall-through
         case 'temp': // Intentional fall-through
-          translatedCode.write(_generateSegmentPop(segment, index));
+          asmOut.write(_generateSegmentPop(segment, index));
           break;
         case 'pointer':
-          translatedCode.write([
+          asmOut.write([
             _popD(),
             '@${index == 0 ? 'THIS' : 'THAT'}',
             'M=D',
           ].join('\n'));
           break;
         case 'static':
-          translatedCode.write([
+          asmOut.write([
             _popD(),
             '@$_filename.$index',
             'M=D',
@@ -159,7 +159,7 @@ class CodeWriter implements ICodeWriter {
       throw UnsupportedError('CommandType $command not supported');
     }
 
-    _writeBufferContentsToOutput(translatedCode);
+    _writeBufferContentsToOutput(asmOut);
   }
 
   @override
@@ -170,11 +170,15 @@ class CodeWriter implements ICodeWriter {
   @override
   void writeCall(String functionName, int nArgs) {
     // TODO: implement writeCall
+    final asmOut = _stringBufferWithComment('call $functionName $nArgs\n');
+    _writeBufferContentsToOutput(asmOut);
   }
 
   @override
   void writeFunction(String functionName, int nArgs) {
     // TODO: implement writeFunction
+    final asmOut = _stringBufferWithComment('function $functionName $nArgs\n');
+    _writeBufferContentsToOutput(asmOut);
   }
 
   @override
@@ -207,6 +211,8 @@ class CodeWriter implements ICodeWriter {
   @override
   void writeReturn() {
     // TODO: implement writeReturn
+    final asmOut = _stringBufferWithComment('return\n');
+    _writeBufferContentsToOutput(asmOut);
   }
 
   /// Finish the program with an infinite loopo and close the output file/stream

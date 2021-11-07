@@ -104,6 +104,15 @@ void main(List<String> arguments) async {
         case CommandType.cIf:
           codeWriter.writeIf(parser.arg1());
           break;
+        case CommandType.cFunction:
+          codeWriter.writeFunction(parser.arg1(), parser.arg2());
+          break;
+        case CommandType.cCall:
+          codeWriter.writeCall(parser.arg1(), parser.arg2());
+          break;
+        case CommandType.cReturn:
+          codeWriter.writeReturn();
+          break;
         default:
           throw UnimplementedError('Unrecognized command type of $commandType');
       }

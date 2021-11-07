@@ -63,6 +63,12 @@ class Parser {
         return CommandType.cIf;
       case 'goto':
         return CommandType.cGoto;
+      case 'function':
+        return CommandType.cFunction;
+      case 'call':
+        return CommandType.cCall;
+      case 'return':
+        return CommandType.cReturn;
       default:
         throw UnimplementedError('Received unrecognized command "$command"');
     }
