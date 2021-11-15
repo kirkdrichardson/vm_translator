@@ -174,10 +174,39 @@ class CodeWriter implements ICodeWriter {
     _writeBufferContentsToOutput(asmOut);
   }
 
+  // Inject a function entry label into the code
+  // Initialize local variables to 0
+  // (f)
+  //    for nVars times:
+  //      push 0
   @override
   void writeFunction(String functionName, int nArgs) {
-    // TODO: implement writeFunction
+    _function = functionName;
     final asmOut = _stringBufferWithComment('function $functionName $nArgs\n');
+    asmOut.write([
+      // RAM[R13] = nArgs
+      '($functionName)',
+      '\t@$nArgs',
+      '\tD=A',
+      '\t@R13',
+      '\tM=D',
+      // while (RAM[R13] != 0) push 0
+      '\t($functionName.init_loop)',
+      '\t\t@R13',
+      '\t\tD=M',
+      '\t\t@$functionName.initialized',
+      '\t\tD;JEQ',
+      '\t\t@0',
+      '\t\tD=A',
+      _push(prefix: '\t\t'),
+      '\t\t@R13',
+      '\t\tM=M-1',
+      '\t\t@$functionName.init_loop',
+      '\t\t0;JMP',
+      // Continue from here once initialized
+      '\t($functionName.initialized)',
+    ].join('\n'));
+
     _writeBufferContentsToOutput(asmOut);
   }
 
@@ -210,8 +239,50 @@ class CodeWriter implements ICodeWriter {
 
   @override
   void writeReturn() {
-    // TODO: implement writeReturn
     final asmOut = _stringBufferWithComment('return\n');
+
+    // Performs "{segment} = *(frame - 1)"
+    List<String> reassignSegment(String segment) => [
+          '@R13',
+          'M=M-1',
+          'A=M',
+          'D=M',
+          '@$segment',
+          'M=D',
+        ];
+
+    asmOut.write([
+      // "frame" = LCL
+      '@LCL',
+      'D=M',
+      '@R13',
+      'M=D // "frame" = LCL',
+      // *ARG = pop()
+      _popD(),
+      '@ARG',
+      'A=M',
+      'M=D // *ARG = pop()',
+      // SP = ARG + 1
+      '@ARG',
+      'D=M',
+      '@SP',
+      'M=D+1 // SP = ARG + 1',
+      // THAT = *(frame - 1)
+      ...reassignSegment('THAT'),
+      // THIS = *(frame - 2)
+      ...reassignSegment('THIS'),
+      // ARG = *(frame - 3)
+      ...reassignSegment('ARG'),
+      // LCL = *(frame - 4)
+      ...reassignSegment('LCL'),
+      // R14 = *(frame - 5)
+      // where R14 is the "returnAddress" variable
+      ...reassignSegment('R14'),
+      '@R14',
+      'A=M',
+      '0;JMP',
+    ].join('\n'));
+
     _writeBufferContentsToOutput(asmOut);
   }
 
@@ -228,8 +299,15 @@ class CodeWriter implements ICodeWriter {
 /////////////////////////////////////////////////////////////////////////////////////
 
   // Pushes the value in D to the stack. Equivalent to "push D"
-  static String _push() =>
-      ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1 // push D'].join('\n');
+  static String _push({String? prefix}) {
+    var commands = ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1 // push D'];
+
+    if (prefix != null) {
+      commands = commands.map((e) => '$prefix$e').toList();
+    }
+
+    return commands.join('\n');
+  }
 
   // Pops the value from the top of the stack.
   static String _pop() => ['@SP', 'M=M-1', 'A=M // pop'].join('\n');
