@@ -40,11 +40,37 @@ class CodeWriter implements ICodeWriter {
   String _filename = 'Default';
   // The function currently being translated.
   String _function = 'Main';
+  // A unique ID used to identify a unique return label.
+  int _functionReturnId = 0;
   final Random _random;
+
+  // Get a unique ID for a function return label
+  int _getFunctionReturnId() => ++_functionReturnId;
 
   CodeWriter(file)
       : _sink = file.openSync(mode: FileMode.write),
-        _random = Random();
+        _random = Random() {
+    final asmOut = _stringBufferWithComment('Bootstrap code')..writeln();
+
+    // Sets the HACK .asm symbol to [location] in memory.
+    List<String> initializeSymbol(String symbol, int location) => [
+          '@$location',
+          'D=A',
+          '@$symbol',
+          'M=D',
+        ];
+
+    asmOut.write([
+      ...initializeSymbol('SP', 256),
+      ...initializeSymbol('LCL', 300),
+      ...initializeSymbol('ARG', 400),
+      ...initializeSymbol('THIS', 3000),
+      ...initializeSymbol('THAT', 4000),
+      ..._callFunctionCommands('Sys.init', 0, 0),
+    ].join('\n'));
+
+    _writeBufferContentsToOutput(asmOut);
+  }
 
   int getNextRandom() => _random.nextInt(1000000);
 
@@ -169,8 +195,12 @@ class CodeWriter implements ICodeWriter {
 
   @override
   void writeCall(String functionName, int nArgs) {
-    // TODO: implement writeCall
     final asmOut = _stringBufferWithComment('call $functionName $nArgs\n');
+
+    asmOut.write(
+        _callFunctionCommands(functionName, nArgs, _getFunctionReturnId())
+            .join('\n'));
+
     _writeBufferContentsToOutput(asmOut);
   }
 
@@ -380,6 +410,46 @@ class CodeWriter implements ICodeWriter {
       'A=M',
       'M=D', // RAM[R13] = D
     ].join('\n');
+  }
+
+  static List<String> _callFunctionCommands(
+      String functionName, int nArgs, int returnlabelId) {
+    final returnAddress = '$functionName\$ret.$returnlabelId';
+
+    List<String> pushSegment(String segment) => [
+          '@$segment',
+          'D=M',
+          _push(),
+        ];
+
+    return [
+      // push returnAddress
+      '@$returnAddress',
+      'D=A',
+      _push(),
+      ...pushSegment('LCL'),
+      ...pushSegment('ARG'),
+      ...pushSegment('THIS'),
+      ...pushSegment('THAT'),
+      // ARG = SP - 5 - nArgs
+      '@SP',
+      'D=M',
+      '@5',
+      'D=D-A',
+      '@$nArgs',
+      'D=D-A',
+      '@ARG',
+      'M=D // ARG = SP - 5 - nArgs',
+      // LCL = SP
+      '@SP',
+      'D=M',
+      '@LCL',
+      'M=D // LCL = SP',
+      // goto function
+      '@$functionName',
+      '0;JMP',
+      '($returnAddress)',
+    ];
   }
 
   void _validateCommand(CommandType command, String segment, int index) {
