@@ -50,10 +50,12 @@ M=M+1 // push D
 ## Usage
 Download this repository and run the executable either from the root like `dart bin/vm_translator.dart MyFile.vm` or [add this program as a global package](https://dart.dev/tools/pub/cmd/pub-global#activating-a-package-on-your-local-machine).
 
-If a path to a `.vm` file is passed to the program, as in the example above, only that file will be translated. Otherwise, if a path to a directory is passed, all `.vm` files in that directory and its subdirectories will be translated. If no argument is passed, the program will operated on the directory in which the command is run. These 3 ways of running the program are represented respectively below:
+If a path to a `.vm` file is passed to the program, as in the example above, only that file will be translated. Otherwise, if a path to a directory is passed, all `.vm` files in that directory and its subdirectories will be translated. If no argument is passed, the program will operate on the directory in which the command is run. These 3 ways of running the program are represented respectively below:
 
 `dart bin/vm_translator.dart <path-to-file>`
+
 `dart bin/vm_translator.dart <path-to-directory>`
+
 `dart bin/vm_translator.dart`
 
 ## Testing
