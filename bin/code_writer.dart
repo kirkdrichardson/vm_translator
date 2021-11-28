@@ -271,22 +271,27 @@ class CodeWriter implements ICodeWriter {
   void writeReturn() {
     final asmOut = _stringBufferWithComment('return\n');
 
-    // Performs "{segment} = *(frame - 1)"
-    List<String> reassignSegment(String segment) => [
+    // Performs "{segment} = *(frame - {subtrahend})"
+    List<String> reassignSegment(String segment, int subtrahend) => [
+          '@$subtrahend',
+          'D=A',
           '@R13',
-          'M=M-1',
-          'A=M',
+          'D=M-D',
+          'A=D',
           'D=M',
           '@$segment',
           'M=D',
         ];
 
     asmOut.write([
-      // "frame" = LCL
+      // "frame" = LCL (R13 = frame)
       '@LCL',
       'D=M',
       '@R13',
       'M=D // "frame" = LCL',
+      // R14 = *(frame - 5)
+      // where R14 is the "returnAddress" variable
+      ...reassignSegment('R14', 5),
       // *ARG = pop()
       _popD(),
       '@ARG',
@@ -298,16 +303,13 @@ class CodeWriter implements ICodeWriter {
       '@SP',
       'M=D+1 // SP = ARG + 1',
       // THAT = *(frame - 1)
-      ...reassignSegment('THAT'),
+      ...reassignSegment('THAT', 1),
       // THIS = *(frame - 2)
-      ...reassignSegment('THIS'),
+      ...reassignSegment('THIS', 2),
       // ARG = *(frame - 3)
-      ...reassignSegment('ARG'),
+      ...reassignSegment('ARG', 3),
       // LCL = *(frame - 4)
-      ...reassignSegment('LCL'),
-      // R14 = *(frame - 5)
-      // where R14 is the "returnAddress" variable
-      ...reassignSegment('R14'),
+      ...reassignSegment('LCL', 4),
       '@R14',
       'A=M',
       '0;JMP',
