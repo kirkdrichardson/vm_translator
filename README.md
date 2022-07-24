@@ -1,4 +1,6 @@
 # VM Translator
+The backend of a two-tier compiler for the Jack programming langauge targeting the Hack platform. [See this repo](https://github.com/kirkdrichardson/jackc) for the frontend of the compiler.
+
 This project is a Dart implementation of a translator between a virtual machine language and the Hack assembly language. A specification of each can be found on the [Nand to Tetris website](https://www.nand2tetris.org).
 
 The translator is designed as a command line program that takes one or more files ending in `.vm` as input and generates as output a single `.asm` file. This `.asm` file may then be passed to an assembler which will handle the translation of the Hack language into binary, or it may be run directly in the CPU emulator supplied in the Nand to Tetris tool suite.
